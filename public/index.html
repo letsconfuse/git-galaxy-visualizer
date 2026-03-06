@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GIT GALAXY</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    :root {
+      --void: #000000;
+      --star: #ffffff;
+      --accent: #FF4D00;
+      --dim: #1e1e1e;
+      --muted: #555555;
+      --data: #cccccc;
+      --mono: 'Space Mono', monospace;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--void);
+      font-family: var(--mono);
+      color: var(--star);
+    }
+
+    /* TOP BAR */
+    .top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 44px;
+      background: rgba(0, 0, 0, 0.9);
+      border-bottom: 1px solid var(--dim);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      z-index: 100;
+    }
+
+    .logo {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.45em;
+    }
+
+    .logo-git {
+      color: var(--accent);
+      border-bottom: 1px solid var(--accent);
+      padding-bottom: 2px;
+    }
+
+    .logo-galaxy {
+      color: var(--star);
+    }
+
+    .live-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .live-dot {
+      width: 5px;
+      height: 5px;
+      background: var(--accent);
+      animation: blink 1.5s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.2; }
+    }
+
+    .live-text {
+      font-size: 9px;
+      color: var(--muted);
+      letter-spacing: 0.2em;
+    }
+
+    /* CANVAS */
+    #canvas-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+
+    /* GHOST TEXT */
+    .ghost-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-5deg);
+      font-size: 160px;
+      color: rgba(255, 255, 255, 0.022);
+      pointer-events: none;
+      letter-spacing: 0.1em;
+      font-weight: 700;
+      z-index: 1;
+    }
+
+    /* HERO SEARCH */
+    .hero-search {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      transition: opacity 400ms ease, transform 400ms ease;
+    }
+
+    .hero-search.hidden {
+      opacity: 0;
+      transform: translate(-50%, calc(-50% - 20px));
+      pointer-events: none;
+    }
+
+    .hero-label {
+      font-size: 9px;
+      letter-spacing: 0.5em;
+      color: var(--muted);
+    }
+
+    .search-input-wrapper {
+      position: relative;
+    }
+
+    .search-input {
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--star);
+      font-family: var(--mono);
+      font-size: 22px;
+      color: var(--star);
+      width: 280px;
+      padding: 8px 0;
+      outline: none;
+      caret-color: var(--accent);
+      letter-spacing: 0.05em;
+    }
+
+    .search-input::placeholder {
+      color: var(--muted);
+    }
+
+    .blink-cursor {
+      position: absolute;
+      right: 0;
+      bottom: 10px;
+      font-size: 22px;
+      color: var(--muted);
+      animation: cursor-blink 0.9s infinite;
+    }
+
+    @keyframes cursor-blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+
+    .hero-hint {
+      font-size: 9px;
+      letter-spacing: 0.4em;
+      color: var(--muted);
+    }
+
+    .search-input.error {
+      animation: shake 0.3s ease;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      50% { transform: translateX(6px); }
+      75% { transform: translateX(-6px); }
+    }
+
+    .error-message {
+      font-size: 10px;
+      color: var(--accent);
+      letter-spacing: 0.2em;
+      margin-top: 10px;
+      opacity: 0;
+      transition: opacity 200ms;
+    }
+
+    .error-message.visible {
+      opacity: 1;
+    }
+
+    /* LOADING STATE */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 200ms;
+    }
+
+    .loading-overlay.visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .loading-text {
+      font-size: 11px;
+      letter-spacing: 0.5em;
+      color: var(--star);
+      margin-bottom: 20px;
+    }
+
+    .loading-bar-container {
+      width: 200px;
+      height: 2px;
+      background: var(--dim);
+      overflow: hidden;
+    }
+
+    .loading-bar {
+      width: 40px;
+      height: 100%;
+      background: var(--accent);
+      animation: loading-slide 1.2s ease-in-out infinite;
+    }
+
+    @keyframes loading-slide {
+      0% { transform: translateX(-40px); }
+      100% { transform: translateX(200px); }
+    }
+
+    .scan-line {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 2px;
+      background: var(--accent);
+      z-index: 51;
+      opacity: 0;
+    }
+
+    .scan-line.active {
+      animation: scan 1.2s ease-in-out 2;
+      opacity: 1;
+    }
+
+    @keyframes scan {
+      0% { width: 0; }
+      100% { width: 300px; }
+    }
+
+    /* LEFT DATA PANEL */
+    .data-panel {
+      position: fixed;
+      top: 44px;
+      left: 0;
+      width: 300px;
+      height: calc(100vh - 44px);
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(6px);
+      border-right: 1px solid var(--dim);
+      z-index: 20;
+      transform: translateX(-100%);
+      transition: transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
+      overflow-y: auto;
+      padding: 24px 20px;
+    }
+
+    .data-panel.visible {
+      transform: translateX(0);
+    }
+
+    .data-panel::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .data-panel::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .data-panel::-webkit-scrollbar-thumb {
+      background: var(--dim);
+    }
+
+    .panel-section {
+      border-bottom: 1px solid var(--dim);
+      padding: 18px 0;
+    }
+
+    .panel-section:first-child {
+      padding-top: 0;
+    }
+
+    .section-label {
+      font-size: 8px;
+      letter-spacing: 0.6em;
+      color: var(--accent);
+      margin-bottom: 14px;
+    }
+
+    /* DESIGNATION SECTION */
+    .designation {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--dim);
+      flex-shrink: 0;
+    }
+
+    .designation-info {
+      flex: 1;
+    }
+
+    .username {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+    }
+
+    .bio {
+      font-size: 9px;
+      color: var(--muted);
+      font-style: italic;
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+
+    /* TELEMETRY SECTION */
+    .telemetry-row {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 8px;
+      opacity: 0;
+      animation: fade-in 300ms ease forwards;
+    }
+
+    @keyframes fade-in {
+      to { opacity: 1; }
+    }
+
+    .telemetry-key {
+      font-size: 9px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      white-space: nowrap;
+    }
+
+    .telemetry-dots {
+      flex: 1;
+      border-bottom: 1px dotted var(--dim);
+      min-width: 20px;
+      margin-bottom: 3px;
+    }
+
+    .telemetry-value {
+      font-size: 11px;
+      color: var(--star);
+      letter-spacing: 0.05em;
+    }
+
+    /* ORBITAL BODIES LIST */
+    .repo-list {
+      max-height: 280px;
+      overflow-y: auto;
+    }
+
+    .repo-list::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .repo-list::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .repo-list::-webkit-scrollbar-thumb {
+      background: var(--dim);
+    }
+
+    .repo-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 6px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: border-color 150ms;
+      opacity: 0;
+      animation: fade-in 300ms ease forwards;
+    }
+
+    .repo-item:hover {
+      border-color: var(--dim);
+    }
+
+    .repo-item.selected {
+      border-color: var(--accent);
+    }
+
+    .repo-dot {
+      width: 8px;
+      height: 8px;
+      flex-shrink: 0;
+    }
+
+    .repo-name {
+      font-size: 9px;
+      color: var(--data);
+      letter-spacing: 0.05em;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .repo-stars {
+      font-size: 9px;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+    }
+
+    /* BOTTOM REPO BAR */
+    .repo-bar {
+      position: fixed;
+      bottom: 0;
+      left: 300px;
+      right: 0;
+      height: 70px;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(6px);
+      border-top: 1px solid var(--dim);
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      gap: 20px;
+      transform: translateY(100%);
+      transition: transform 400ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .repo-bar.visible {
+      transform: translateY(0);
+    }
+
+    .repo-bar-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-right: 20px;
+      border-right: 1px solid var(--dim);
+    }
+
+    .repo-bar-item:last-of-type {
+      border-right: none;
+    }
+
+    .repo-bar-name {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+    }
+
+    .repo-bar-lang {
+      font-size: 9px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .repo-bar-stat {
+      font-size: 10px;
+      color: var(--data);
+      letter-spacing: 0.05em;
+    }
+
+    .repo-bar-desc {
+      font-size: 9px;
+      color: var(--muted);
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 300px;
+    }
+
+    .repo-bar-link {
+      font-size: 9px;
+      color: var(--accent);
+      text-decoration: none;
+      letter-spacing: 0.2em;
+      margin-left: auto;
+      transition: opacity 150ms;
+    }
+
+    .repo-bar-link:hover {
+      opacity: 0.7;
+    }
+
+    /* CORNER DETAILS */
+    .version {
+      position: fixed;
+      bottom: 12px;
+      left: 12px;
+      font-size: 9px;
+      color: var(--dim);
+      z-index: 5;
+    }
+
+    .utc-clock {
+      position: fixed;
+      bottom: 12px;
+      right: 12px;
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0.2em;
+      z-index: 5;
+    }
+
+    /* TOOLTIP */
+    .tooltip {
+      position: fixed;
+      font-size: 9px;
+      font-family: var(--mono);
+      color: var(--star);
+      border: 1px solid var(--dim);
+      padding: 4px 8px;
+      pointer-events: none;
+      z-index: 200;
+      opacity: 0;
+      transition: opacity 100ms;
+      letter-spacing: 0.1em;
+    }
+
+    .tooltip.visible {
+      opacity: 1;
+    }
+
+    /* MOBILE */
+    @media (max-width: 768px) {
+      .data-panel {
+        display: none;
+      }
+
+      .repo-bar {
+        left: 0;
+        height: auto;
+        min-height: 60px;
+        padding: 12px 16px;
+        flex-wrap: wrap;
+      }
+
+      .repo-bar-desc {
+        display: none;
+      }
+
+      .mobile-stats {
+        position: fixed;
+        bottom: 80px;
+        left: 0;
+        right: 0;
+        background: rgba(0, 0, 0, 0.85);
+        backdrop-filter: blur(6px);
+        border-top: 1px solid var(--dim);
+        padding: 12px 16px;
+        z-index: 19;
+        display: none;
+      }
+
+      .mobile-stats.visible {
+        display: block;
+      }
+
+      .mobile-stat-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 9px;
+        margin-bottom: 6px;
+      }
+
+      .mobile-stat-key {
+        color: var(--muted);
+        letter-spacing: 0.1em;
+      }
+
+      .mobile-stat-value {
+        color: var(--star);
+      }
+    }
+
+    /* Cursor */
+    body {
+      cursor: crosshair;
+    }
+  </style>
+</head>
+<body>
+  <!-- TOP BAR -->
+  <header class="top-bar">
+    <div class="logo">
+      <span class="logo-git">GIT</span> <span class="logo-galaxy">GALAXY</span>
+    </div>
+    <div class="live-indicator">
+      <div class="live-dot"></div>
+      <span class="live-text">LIVE</span>
+    </div>
+  </header>
+
+  <!-- CANVAS -->
+  <div id="canvas-container"></div>
+
+  <!-- GHOST TEXT -->
+  <div class="ghost-text">∞</div>
+
+  <!-- HERO SEARCH -->
+  <div class="hero-search" id="hero-search">
+    <div class="hero-label">GITHUB USERNAME → SOLAR SYSTEM</div>
+    <div class="search-input-wrapper">
+      <input type="text" class="search-input" id="search-input" placeholder="username" autocomplete="off" spellcheck="false">
+      <span class="blink-cursor">_</span>
+    </div>
+    <div class="hero-hint">PRESS ENTER TO SCAN</div>
+    <div class="error-message" id="error-message"></div>
+  </div>
+
+  <!-- LOADING -->
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="loading-text">SCANNING...</div>
+    <div class="loading-bar-container">
+      <div class="loading-bar"></div>
+    </div>
+  </div>
+  <div class="scan-line" id="scan-line"></div>
+
+  <!-- LEFT DATA PANEL -->
+  <aside class="data-panel" id="data-panel">
+    <div class="panel-section">
+      <div class="designation">
+        <img src="" alt="Avatar" class="avatar" id="avatar">
+        <div class="designation-info">
+          <div class="username" id="panel-username"></div>
+          <div class="bio" id="panel-bio"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-label">TELEMETRY</div>
+      <div id="telemetry-rows"></div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-label">ORBITAL BODIES</div>
+      <div class="repo-list" id="repo-list"></div>
+    </div>
+  </aside>
+
+  <!-- BOTTOM REPO BAR -->
+  <div class="repo-bar" id="repo-bar">
+    <div class="repo-bar-item">
+      <span class="repo-bar-name" id="bar-name"></span>
+    </div>
+    <div class="repo-bar-item">
+      <span class="repo-bar-lang" id="bar-lang"></span>
+    </div>
+    <div class="repo-bar-item">
+      <span class="repo-bar-stat" id="bar-stars"></span>
+    </div>
+    <div class="repo-bar-item">
+      <span class="repo-bar-stat" id="bar-forks"></span>
+    </div>
+    <span class="repo-bar-desc" id="bar-desc"></span>
+    <a href="#" target="_blank" class="repo-bar-link" id="bar-link">↗ OPEN</a>
+  </div>
+
+  <!-- MOBILE STATS -->
+  <div class="mobile-stats" id="mobile-stats"></div>
+
+  <!-- CORNER DETAILS -->
+  <div class="version">v0.1.0</div>
+  <div class="utc-clock" id="utc-clock"></div>
+
+  <!-- TOOLTIP -->
+  <div class="tooltip" id="tooltip"></div>
+
+  <script>
+    // ========== CONFIGURATION ==========
+    const LANG_COLORS = {
+      JavaScript: 0xF7DF1E,
+      TypeScript: 0x3178C6,
+      Python: 0x4B8BBE,
+      Rust: 0xCE422B,
+      Go: 0x00ADD8,
+      Ruby: 0xCC342D,
+      Java: 0xB07219,
+      'C++': 0xF34B7D,
+      C: 0x555555,
+      CSS: 0x563D7C,
+      HTML: 0xE34C26,
+      Shell: 0x89E051,
+      PHP: 0x4F5D95,
+      Swift: 0xF05138,
+      Kotlin: 0x7F52FF,
+      Dart: 0x00B4AB,
+      default: 0x666666
+    };
+
+    // ========== DOM ELEMENTS ==========
+    const container = document.getElementById('canvas-container');
+    const heroSearch = document.getElementById('hero-search');
+    const searchInput = document.getElementById('search-input');
+    const errorMessage = document.getElementById('error-message');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const scanLine = document.getElementById('scan-line');
+    const dataPanel = document.getElementById('data-panel');
+    const repoBar = document.getElementById('repo-bar');
+    const tooltip = document.getElementById('tooltip');
+    const utcClock = document.getElementById('utc-clock');
+
+    // ========== THREE.JS SETUP ==========
+    let scene, camera, renderer, controls;
+    let sun, planets = [], planetMeshes = [], orbitRings = [], moons = [];
+    let backgroundStars;
+    let ghostSystems = [];
+    let raycaster, mouse;
+    let selectedPlanet = null;
+    let reposData = [];
+    let animationQueue = [];
+
+    function initThree() {
+      scene = new THREE.Scene();
+
+      camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(0, 18, 45);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setClearColor(0x000000, 1);
+      renderer.shadowMap.enabled = false;
+      container.appendChild(renderer.domElement);
+
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.06;
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 0.15;
+      controls.minDistance = 8;
+      controls.maxDistance = 120;
+
+      // Ambient light
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.15);
+      scene.add(ambientLight);
+
+      // Point light at origin
+      const pointLight = new THREE.PointLight(0xffffff, 1.2, 200);
+      pointLight.position.set(0, 0, 0);
+      scene.add(pointLight);
+
+      // Raycaster
+      raycaster = new THREE.Raycaster();
+      mouse = new THREE.Vector2();
+
+      createBackgroundStars();
+      createGhostSystems();
+
+      animate();
+    }
+
+    function createBackgroundStars() {
+      const geometry = new THREE.BufferGeometry();
+      const positions = [];
+
+      for (let i = 0; i < 1200; i++) {
+        const radius = Math.random() * 200;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+
+        positions.push(
+          radius * Math.sin(phi) * Math.cos(theta),
+          radius * Math.sin(phi) * Math.sin(theta),
+          radius * Math.cos(phi)
+        );
+      }
+
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+
+      const material = new THREE.PointsMaterial({
+        size: 0.18,
+        color: 0xffffff,
+        sizeAttenuation: true
+      });
+
+      backgroundStars = new THREE.Points(geometry, material);
+      scene.add(backgroundStars);
+    }
+
+    function createGhostSystems() {
+      const positions = [
+        { x: 0, y: 0, z: 0 },
+        { x: 25, y: 10, z: -15 },
+        { x: -20, y: -8, z: -10 }
+      ];
+
+      positions.forEach((pos, sysIndex) => {
+        const system = { sun: null, planets: [], rings: [] };
+
+        // Ghost sun
+        const sunGeo = new THREE.SphereGeometry(1.5, 32, 32);
+        const sunMat = new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0.08
+        });
+        const ghostSun = new THREE.Mesh(sunGeo, sunMat);
+        ghostSun.position.set(pos.x, pos.y, pos.z);
+        scene.add(ghostSun);
+        system.sun = ghostSun;
+
+        // Ghost planets
+        const numPlanets = 3 + Math.floor(Math.random() * 4);
+        for (let i = 0; i < numPlanets; i++) {
+          const orbitRadius = 4 + i * 2.5;
+          const planetRadius = 0.15 + Math.random() * 0.3;
+
+          const planetGeo = new THREE.SphereGeometry(planetRadius, 16, 16);
+          const planetMat = new THREE.MeshBasicMaterial({
+            color: Object.values(LANG_COLORS)[Math.floor(Math.random() * Object.keys(LANG_COLORS).length)],
+            transparent: true,
+            opacity: 0.18
+          });
+          const planet = new THREE.Mesh(planetGeo, planetMat);
+
+          const angle = Math.random() * Math.PI * 2;
+          planet.position.set(
+            pos.x + Math.cos(angle) * orbitRadius,
+            pos.y + (Math.random() - 0.5) * 0.5,
+            pos.z + Math.sin(angle) * orbitRadius
+          );
+
+          planet.userData = {
+            orbitRadius,
+            angle,
+            speed: 0.003 / Math.sqrt(orbitRadius),
+            centerX: pos.x,
+            centerY: pos.y,
+            centerZ: pos.z
+          };
+
+          scene.add(planet);
+          system.planets.push(planet);
+
+          // Ghost orbit ring
+          const ringGeo = new THREE.RingGeometry(orbitRadius - 0.01, orbitRadius + 0.01, 128);
+          const ringMat = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.02,
+            side: THREE.DoubleSide
+          });
+          const ring = new THREE.Mesh(ringGeo, ringMat);
+          ring.position.set(pos.x, pos.y, pos.z);
+          ring.rotation.x = -Math.PI / 2;
+          scene.add(ring);
+          system.rings.push(ring);
+        }
+
+        ghostSystems.push(system);
+      });
+    }
+
+    function clearGhostSystems() {
+      ghostSystems.forEach(system => {
+        if (system.sun) {
+          system.sun.geometry.dispose();
+          system.sun.material.dispose();
+          scene.remove(system.sun);
+        }
+        system.planets.forEach(p => {
+          p.geometry.dispose();
+          p.material.dispose();
+          scene.remove(p);
+        });
+        system.rings.forEach(r => {
+          r.geometry.dispose();
+          r.material.dispose();
+          scene.remove(r);
+        });
+      });
+      ghostSystems = [];
+    }
+
+    function clearSolarSystem() {
+      if (sun) {
+        sun.traverse(child => {
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) child.material.dispose();
+        });
+        scene.remove(sun);
+        sun = null;
+      }
+
+      planets.forEach(p => {
+        if (p.mesh) {
+          p.mesh.geometry.dispose();
+          p.mesh.material.dispose();
+          scene.remove(p.mesh);
+        }
+        if (p.highlight) {
+          p.highlight.geometry.dispose();
+          p.highlight.material.dispose();
+          scene.remove(p.highlight);
+        }
+      });
+      planets = [];
+      planetMeshes = [];
+
+      orbitRings.forEach(r => {
+        r.geometry.dispose();
+        r.material.dispose();
+        scene.remove(r);
+      });
+      orbitRings = [];
+
+      moons.forEach(m => {
+        m.mesh.geometry.dispose();
+        m.mesh.material.dispose();
+        scene.remove(m.mesh);
+      });
+      moons = [];
+    }
+
+    function createSolarSystem(userData, repos) {
+      clearGhostSystems();
+      clearSolarSystem();
+
+      const totalStars = repos.reduce((sum, r) => sum + (r.stargazers_count || 0), 0);
+      const sunRadius = Math.min(Math.max(1.2 + (totalStars / 5000) * 2.3, 1.2), 3.5);
+
+      // Sun group
+      sun = new THREE.Group();
+
+      const sunGeo = new THREE.SphereGeometry(sunRadius, 32, 32);
+      const sunMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      const sunMesh = new THREE.Mesh(sunGeo, sunMat);
+      sunMesh.scale.set(0, 0, 0);
+      sun.add(sunMesh);
+
+      // Corona rings
+      const corona1Geo = new THREE.TorusGeometry(sunRadius * 1.35, 0.04, 8, 64);
+      const corona1Mat = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.12
+      });
+      const corona1 = new THREE.Mesh(corona1Geo, corona1Mat);
+      corona1.rotation.x = Math.PI / 2;
+      sun.add(corona1);
+
+      const corona2Geo = new THREE.TorusGeometry(sunRadius * 1.7, 0.02, 8, 64);
+      const corona2Mat = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.06
+      });
+      const corona2 = new THREE.Mesh(corona2Geo, corona2Mat);
+      corona2.rotation.x = Math.PI / 2;
+      sun.add(corona2);
+
+      // Sun light
+      const sunLight = new THREE.PointLight(0xfff5e0, 1.5, 180);
+      sun.add(sunLight);
+
+      scene.add(sun);
+
+      // Animate sun scale
+      animationQueue.push({
+        target: sunMesh.scale,
+        property: null,
+        from: { x: 0, y: 0, z: 0 },
+        to: { x: 1, y: 1, z: 1 },
+        duration: 400,
+        startTime: performance.now(),
+        delay: 0
+      });
+
+      // Create planets
+      const maxRepos = Math.min(repos.length, 30);
+      reposData = repos.slice(0, maxRepos);
+
+      reposData.forEach((repo, index) => {
+        const orbitRadius = sunRadius + 4 + (3.2 + index * 0.4) * (index + 1) / 2;
+        const planetRadius = Math.min(Math.max(0.15 + (repo.stargazers_count / 500) * 0.55, 0.15), 0.7);
+        const langColor = LANG_COLORS[repo.language] || LANG_COLORS.default;
+
+        // Planet mesh
+        const planetGeo = new THREE.SphereGeometry(planetRadius, 16, 16);
+        const planetMat = new THREE.MeshBasicMaterial({ color: langColor });
+        const planetMesh = new THREE.Mesh(planetGeo, planetMat);
+        planetMesh.scale.set(0, 0, 0);
+
+        const inclination = (Math.random() - 0.5) * 0.16;
+        const angle = Math.random() * Math.PI * 2;
+
+        planetMesh.position.set(
+          Math.cos(angle) * orbitRadius,
+          Math.sin(inclination) * orbitRadius * 0.1,
+          Math.sin(angle) * orbitRadius
+        );
+
+        planetMesh.userData = {
+          repoIndex: index,
+          repo: repo,
+          orbitRadius,
+          angle,
+          speed: 0.008 / Math.sqrt(orbitRadius),
+          inclination,
+          planetRadius
+        };
+
+        scene.add(planetMesh);
+        planetMeshes.push(planetMesh);
+
+        planets.push({
+          mesh: planetMesh,
+          highlight: null,
+          orbitRadius,
+          angle,
+          speed: 0.008 / Math.sqrt(orbitRadius),
+          inclination
+        });
+
+        // Animate planet scale
+        animationQueue.push({
+          target: planetMesh.scale,
+          property: null,
+          from: { x: 0, y: 0, z: 0 },
+          to: { x: 1, y: 1, z: 1 },
+          duration: 300,
+          startTime: performance.now(),
+          delay: 200 + index * 80
+        });
+
+        // Orbit ring
+        const ringGeo = new THREE.RingGeometry(orbitRadius - 0.01, orbitRadius + 0.01, 128);
+        const ringMat = new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0,
+          side: THREE.DoubleSide
+        });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.x = -Math.PI / 2;
+        scene.add(ring);
+        orbitRings.push(ring);
+
+        // Animate ring opacity
+        animationQueue.push({
+          target: ringMat,
+          property: 'opacity',
+          from: 0,
+          to: 0.05,
+          duration: 600,
+          startTime: performance.now(),
+          delay: 400 + maxRepos * 80
+        });
+
+        // Moons
+        const numMoons = Math.min(repo.forks_count || 0, 3);
+        for (let m = 0; m < numMoons; m++) {
+          const moonGeo = new THREE.SphereGeometry(0.07, 8, 8);
+          const moonMat = new THREE.MeshBasicMaterial({ color: 0x888888 });
+          const moonMesh = new THREE.Mesh(moonGeo, moonMat);
+
+          const moonOrbit = 0.9 + m * 0.35;
+          const moonAngle = Math.random() * Math.PI * 2;
+
+          moonMesh.userData = {
+            parentIndex: index,
+            moonOrbit,
+            moonAngle,
+            moonSpeed: 0.04
+          };
+
+          scene.add(moonMesh);
+          moons.push({ mesh: moonMesh, parentIndex: index, moonOrbit, moonAngle, moonSpeed: 0.04 });
+        }
+      });
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Background stars rotation
+      if (backgroundStars) {
+        backgroundStars.rotation.y += 0.00008;
+      }
+
+      // Ghost systems animation
+      ghostSystems.forEach(system => {
+        system.planets.forEach(p => {
+          p.userData.angle += p.userData.speed;
+          p.position.x = p.userData.centerX + Math.cos(p.userData.angle) * p.userData.orbitRadius;
+          p.position.z = p.userData.centerZ + Math.sin(p.userData.angle) * p.userData.orbitRadius;
+        });
+      });
+
+      // Planets orbit animation
+      planets.forEach((p, i) => {
+        p.angle += p.speed;
+        p.mesh.position.x = Math.cos(p.angle) * p.orbitRadius;
+        p.mesh.position.z = Math.sin(p.angle) * p.orbitRadius;
+        p.mesh.position.y = Math.sin(p.inclination) * p.orbitRadius * 0.1;
+      });
+
+      // Moons orbit animation
+      moons.forEach(m => {
+        if (planets[m.parentIndex]) {
+          const parent = planets[m.parentIndex].mesh;
+          m.moonAngle += m.moonSpeed;
+          m.mesh.position.x = parent.position.x + Math.cos(m.moonAngle) * m.moonOrbit;
+          m.mesh.position.y = parent.position.y;
+          m.mesh.position.z = parent.position.z + Math.sin(m.moonAngle) * m.moonOrbit;
+        }
+      });
+
+      // Process animation queue
+      const now = performance.now();
+      animationQueue = animationQueue.filter(anim => {
+        const elapsed = now - anim.startTime - anim.delay;
+        if (elapsed < 0) return true;
+
+        const progress = Math.min(elapsed / anim.duration, 1);
+        const eased = easeOutCubic(progress);
+
+        if (anim.property) {
+          anim.target[anim.property] = anim.from + (anim.to - anim.from) * eased;
+        } else {
+          anim.target.x = anim.from.x + (anim.to.x - anim.from.x) * eased;
+          anim.target.y = anim.from.y + (anim.to.y - anim.from.y) * eased;
+          anim.target.z = anim.from.z + (anim.to.z - anim.from.z) * eased;
+        }
+
+        return progress < 1;
+      });
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    function easeOutCubic(t) {
+      return 1 - Math.pow(1 - t, 3);
+    }
+
+    // ========== EVENT HANDLERS ==========
+    function onMouseMove(event) {
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(planetMeshes);
+
+      if (intersects.length > 0) {
+        const planet = intersects[0].object;
+        const repo = planet.userData.repo;
+
+        tooltip.textContent = `${repo.name} / ★ ${repo.stargazers_count}`;
+        tooltip.style.left = `${event.clientX + 12}px`;
+        tooltip.style.top = `${event.clientY - 8}px`;
+        tooltip.classList.add('visible');
+      } else {
+        tooltip.classList.remove('visible');
+      }
+    }
+
+    function onMouseClick(event) {
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(planetMeshes);
+
+      if (intersects.length > 0) {
+        const planet = intersects[0].object;
+        selectPlanet(planet.userData.repoIndex);
+      }
+    }
+
+    function selectPlanet(index) {
+      // Remove previous highlight
+      planets.forEach(p => {
+        if (p.highlight) {
+          scene.remove(p.highlight);
+          p.highlight.geometry.dispose();
+          p.highlight.material.dispose();
+          p.highlight = null;
+        }
+      });
+
+      // Update repo list selection
+      document.querySelectorAll('.repo-item').forEach((el, i) => {
+        el.classList.toggle('selected', i === index);
+      });
+
+      // Add highlight ring
+      const planet = planets[index];
+      const highlightGeo = new THREE.TorusGeometry(planet.mesh.userData.planetRadius * 1.5, 0.03, 8, 32);
+      const highlightMat = new THREE.MeshBasicMaterial({
+        color: 0xFF4D00,
+        transparent: true,
+        opacity: 0.8
+      });
+      const highlight = new THREE.Mesh(highlightGeo, highlightMat);
+      highlight.rotation.x = Math.PI / 2;
+      planet.mesh.add(highlight);
+      planet.highlight = highlight;
+
+      // Update bottom bar
+      const repo = reposData[index];
+      document.getElementById('bar-name').textContent = repo.name;
+      document.getElementById('bar-lang').textContent = repo.language || 'UNKNOWN';
+      document.getElementById('bar-stars').textContent = `★ ${repo.stargazers_count}`;
+      document.getElementById('bar-forks').textContent = `⑂ ${repo.forks_count}`;
+      document.getElementById('bar-desc').textContent = repo.description || '';
+      document.getElementById('bar-link').href = repo.html_url;
+      repoBar.classList.add('visible');
+
+      selectedPlanet = index;
+    }
+
+    function onResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    // ========== DATA FETCHING ==========
+    async function fetchGitHubData(username) {
+      heroSearch.classList.add('hidden');
+      loadingOverlay.classList.add('visible');
+      scanLine.classList.add('active');
+
+      try {
+        const [userRes, reposRes] = await Promise.all([
+          fetch(`https://api.github.com/users/${username}`),
+          fetch(`https://api.github.com/users/${username}/repos?sort=stars&per_page=30&type=public`)
+        ]);
+
+        if (userRes.status === 404) {
+          throw new Error('USER NOT FOUND');
+        }
+
+        if (userRes.status === 403 || reposRes.status === 403) {
+          throw new Error('API RATE LIMIT — TRY AGAIN IN 60s');
+        }
+
+        if (!userRes.ok || !reposRes.ok) {
+          throw new Error('FETCH ERROR');
+        }
+
+        const userData = await userRes.json();
+        const repos = await reposRes.json();
+
+        loadingOverlay.classList.remove('visible');
+        scanLine.classList.remove('active');
+
+        // Update page title
+        document.title = `GIT GALAXY — ${username}`;
+
+        // Build solar system
+        createSolarSystem(userData, repos);
+
+        // Populate data panel
+        populateDataPanel(userData, repos);
+
+        // Show data panel with delay
+        setTimeout(() => {
+          dataPanel.classList.add('visible');
+        }, 200);
+
+      } catch (error) {
+        loadingOverlay.classList.remove('visible');
+        scanLine.classList.remove('active');
+        heroSearch.classList.remove('hidden');
+        errorMessage.textContent = error.message;
+        errorMessage.classList.add('visible');
+        searchInput.classList.add('error');
+        setTimeout(() => searchInput.classList.remove('error'), 300);
+      }
+    }
+
+    function populateDataPanel(userData, repos) {
+      // Avatar
+      document.getElementById('avatar').src = userData.avatar_url;
+
+      // Username
+      document.getElementById('panel-username').textContent = userData.login;
+
+      // Bio
+      const bioEl = document.getElementById('panel-bio');
+      if (userData.bio) {
+        bioEl.textContent = userData.bio;
+        bioEl.style.display = 'block';
+      } else {
+        bioEl.style.display = 'none';
+      }
+
+      // Telemetry
+      const totalStars = repos.reduce((sum, r) => sum + (r.stargazers_count || 0), 0);
+      const languages = repos.map(r => r.language).filter(Boolean);
+      const topLang = languages.length > 0
+        ? languages.sort((a, b) =>
+            languages.filter(l => l === b).length - languages.filter(l => l === a).length
+          )[0]
+        : 'UNKNOWN';
+
+      const lastUpdated = repos.length > 0
+        ? getTimeAgo(new Date(repos[0].updated_at))
+        : 'UNKNOWN';
+
+      const telemetryData = [
+        { key: 'STELLAR MASS', value: totalStars.toLocaleString() },
+        { key: 'ORBITAL BODIES', value: userData.public_repos },
+        { key: 'GRAVITATIONAL PULL', value: userData.followers.toLocaleString() },
+        { key: 'SPECTRUM', value: topLang },
+        { key: 'LAST SIGNAL', value: lastUpdated },
+        { key: 'LOCATION', value: userData.location || 'UNKNOWN' }
+      ];
+
+      const telemetryContainer = document.getElementById('telemetry-rows');
+      telemetryContainer.innerHTML = '';
+
+      telemetryData.forEach((item, index) => {
+        const row = document.createElement('div');
+        row.className = 'telemetry-row';
+        row.style.animationDelay = `${index * 40}ms`;
+        row.innerHTML = `
+          <span class="telemetry-key">${item.key}</span>
+          <span class="telemetry-dots"></span>
+          <span class="telemetry-value">${item.value}</span>
+        `;
+        telemetryContainer.appendChild(row);
+      });
+
+      // Repo list
+      const repoListContainer = document.getElementById('repo-list');
+      repoListContainer.innerHTML = '';
+
+      repos.slice(0, 30).forEach((repo, index) => {
+        const langColor = LANG_COLORS[repo.language] || LANG_COLORS.default;
+        const colorHex = '#' + langColor.toString(16).padStart(6, '0');
+
+        const item = document.createElement('div');
+        item.className = 'repo-item';
+        item.style.animationDelay = `${200 + index * 40}ms`;
+        item.innerHTML = `
+          <div class="repo-dot" style="background: ${colorHex}"></div>
+          <span class="repo-name">${repo.name}</span>
+          <span class="repo-stars">★ ${repo.stargazers_count}</span>
+        `;
+        item.addEventListener('click', () => selectPlanet(index));
+        repoListContainer.appendChild(item);
+      });
+
+      // Mobile stats
+      const mobileStats = document.getElementById('mobile-stats');
+      mobileStats.innerHTML = `
+        <div class="mobile-stat-row">
+          <span class="mobile-stat-key">STELLAR MASS</span>
+          <span class="mobile-stat-value">${totalStars.toLocaleString()}</span>
+        </div>
+        <div class="mobile-stat-row">
+          <span class="mobile-stat-key">ORBITAL BODIES</span>
+          <span class="mobile-stat-value">${userData.public_repos}</span>
+        </div>
+        <div class="mobile-stat-row">
+          <span class="mobile-stat-key">FOLLOWERS</span>
+          <span class="mobile-stat-value">${userData.followers.toLocaleString()}</span>
+        </div>
+      `;
+      mobileStats.classList.add('visible');
+    }
+
+    function getTimeAgo(date) {
+      const seconds = Math.floor((new Date() - date) / 1000);
+      const intervals = [
+        { label: 'year', seconds: 31536000 },
+        { label: 'month', seconds: 2592000 },
+        { label: 'day', seconds: 86400 },
+        { label: 'hour', seconds: 3600 },
+        { label: 'minute', seconds: 60 }
+      ];
+
+      for (const interval of intervals) {
+        const count = Math.floor(seconds / interval.seconds);
+        if (count >= 1) {
+          return `${count} ${interval.label}${count > 1 ? 's' : ''} ago`;
+        }
+      }
+      return 'just now';
+    }
+
+    // ========== UTC CLOCK ==========
+    function updateClock() {
+      const now = new Date();
+      const hours = now.getUTCHours().toString().padStart(2, '0');
+      const minutes = now.getUTCMinutes().toString().padStart(2, '0');
+      const seconds = now.getUTCSeconds().toString().padStart(2, '0');
+      utcClock.textContent = `UTC ${hours}:${minutes}:${seconds}`;
+    }
+
+    // ========== INITIALIZATION ==========
+    function init() {
+      initThree();
+
+      // Event listeners
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          const username = searchInput.value.trim();
+          if (username) {
+            errorMessage.classList.remove('visible');
+            fetchGitHubData(username);
+          }
+        }
+      });
+
+      searchInput.addEventListener('input', () => {
+        errorMessage.classList.remove('visible');
+      });
+
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('click', onMouseClick);
+      window.addEventListener('resize', onResize);
+
+      // UTC clock
+      updateClock();
+      setInterval(updateClock, 1000);
+
+      // Focus input
+      searchInput.focus();
+    }
+
+    init();
+  </script>
+</body>
+</html>
