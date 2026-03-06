@@ -1,4 +1,4 @@
-# git-galaxy-visualizer
+# v0-git-galaxy-visualizer
 
 This is a [Next.js](https://nextjs.org) project bootstrapped with [v0](https://v0.app).
 
