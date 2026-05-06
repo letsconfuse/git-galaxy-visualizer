@@ -1,35 +1,41 @@
-# v0-git-galaxy-visualizer
+# Git Galaxy Visualizer
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [v0](https://v0.app).
+**Git Galaxy Visualizer** is a modern, high-performance 3D visualization platform built with **Next.js**, **TypeScript**, and **Three.js**. It transforms GitHub profiles into interactive celestial systems, where repositories are rendered as dynamic planets based on real-time API data.
 
-## Built with v0
+This version is the enhanced, framework-based implementation of the original [Git Galaxy](https://github.com/letsconfuse/Git-Galaxy) project.
 
-This repository is linked to a [v0](https://v0.app) project. You can continue developing by visiting the link below -- start new chats to make changes, and v0 will push commits directly to this repo. Every merge to `main` will automatically deploy.
+## Features
 
-[Continue working on v0 →](https://v0.app/chat/projects/prj_MmVCUVRPpQtjkSEtNkgOCHFfod63)
+- **React-Based Architecture**: Built with Next.js 14 and TypeScript for robust type safety and component modularity.
+- **3D Celestial Mapping**: Uses Three.js (WebGL) to represent repositories as planets with size and orbit derived from GitHub stars and forks.
+- **Modern UI Components**: Leverages **shadcn/ui** and **Tailwind CSS** for a polished, responsive cyberpunk interface.
+- **Real-Time Telemetry**: Interactive data panels providing deep insights into user metrics and language distribution.
+- **Optimized Performance**: Smooth 3D rendering with auto-rotation, damping, and efficient state management.
+
+## Tech Stack
+
+- **Framework**: [Next.js](https://nextjs.org/) (App Router)
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **3D Engine**: [Three.js](https://threejs.org/)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **UI Components**: [shadcn/ui](https://ui.shadcn.com/)
 
 ## Getting Started
 
-First, run the development server:
+### Installation
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/letsconfuse/git-galaxy-visualizer.git
+   ```
+2. Install dependencies:
+   ```bash
+   pnpm install
+   ```
+3. Run the development server:
+   ```bash
+   pnpm dev
+   ```
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-```
+## License
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-## Learn More
-
-To learn more, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-- [v0 Documentation](https://v0.app/docs) - learn about v0 and how to use it.
-
-<a href="https://v0.app/chat/api/kiro/clone/letsconfuse/git-galaxy-visualizer" alt="Open in Kiro"><img src="https://pdgvvgmkdvyeydso.public.blob.vercel-storage.com/open%20in%20kiro.svg?sanitize=true" /></a>
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
