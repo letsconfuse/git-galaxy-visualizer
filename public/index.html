@@ -91,6 +91,23 @@
       letter-spacing: 0.2em;
     }
 
+    .reset-button {
+      font-size: 9px;
+      color: var(--accent);
+      letter-spacing: 0.2em;
+      cursor: pointer;
+      border: 1px solid var(--accent);
+      padding: 4px 8px;
+      margin-right: 20px;
+      display: none;
+      transition: all 200ms;
+    }
+
+    .reset-button:hover {
+      background: var(--accent);
+      color: var(--void);
+    }
+
     /* CANVAS */
     #canvas-container {
       position: fixed;
@@ -634,6 +651,7 @@
       <span class="logo-git">GIT</span> <span class="logo-galaxy">GALAXY</span>
     </div>
     <div class="live-indicator">
+      <div id="reset-button" class="reset-button" onclick="resetUniverse()">RESET</div>
       <div class="live-dot"></div>
       <span class="live-text">LIVE</span>
     </div>
@@ -966,6 +984,7 @@
     function createSolarSystem(userData, repos) {
       clearGhostSystems();
       clearSolarSystem();
+      document.getElementById('reset-button').style.display = 'block';
 
       const totalStars = repos.reduce((sum, r) => sum + (r.stargazers_count || 0), 0);
       const sunRadius = Math.min(Math.max(1.2 + (totalStars / 5000) * 2.3, 1.2), 3.5);
@@ -1467,6 +1486,23 @@
       setInterval(updateClock, 1000);
 
       // Focus input
+      searchInput.focus();
+    }
+
+    function resetUniverse() {
+      clearSolarSystem();
+      createGhostSystems();
+      
+      dataPanel.classList.remove('visible');
+      repoBar.classList.remove('visible');
+      heroSearch.classList.remove('hidden');
+      document.getElementById('reset-button').style.display = 'none';
+      if (document.getElementById('mobile-stats')) {
+        document.getElementById('mobile-stats').classList.remove('visible');
+      }
+      
+      searchInput.value = '';
+      document.title = 'GIT GALAXY';
       searchInput.focus();
     }
 
